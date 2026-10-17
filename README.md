@@ -12,10 +12,14 @@ The agent uses Playwright to interact with the browser, loads contact details fr
 - **Unlisted IP handling:** Leaves the lookup result visible and continues to the next IP when the address is clearly not listed as poor.
 - **Removal form automation:** Opens the removal form when the lookup clearly reports a poor listing.
 - **Automatic form submission:** Fills in the configured contact details and submits the removal request automatically.
+- **Confirmation detection:** Recognizes Barracuda's request-received confirmation message.
+- **Confirmation number extraction:** Extracts the confirmation number when it appears in the response and stores it in the existing result detail.
+- **Confirmation waiting:** Checks for a confirmation for up to three minutes after the submit click. When a recognized confirmation appears, the result is recorded and the agent continues to the next IP. If none appears before the deadline, the result is recorded as `SUBMISSION_UNCONFIRMED` and processing continues without an automatic retry.
 - **Error handling:** Records ambiguous or unexpected lookup responses as `CHECK_ERROR` without opening the removal form.
-- **Result logging:** Records processing history in `results.csv`.
-- **Persistent state:** Stores the latest processing state in `agent.db`.
+- **Result logging:** Records timestamps, IP addresses, statuses, and details in `results.csv`.
+- **Persistent state:** Stores the latest processing state and result detail in `agent.db`.
 - **Environment-based configuration:** Loads contact details and request information from a local `.env` file.
+- **Duplicate protection:** Skips IPs that already have a recorded submission attempt or outcome, so they can be verified before any further attempt.
 
 ## Requirements
 
@@ -108,25 +112,27 @@ The agent opens a visible Chromium browser and processes the input addresses acc
 
 ### Expected behavior
 
-| Lookup result | Agent behavior |
+| Lookup result or form outcome | Agent behavior |
 |---|---|
-| `NOT_LISTED` | Leaves the lookup result visible and continues to the next IP. |
-| `LISTED` | Opens the removal form, fills the configured contact details, and attempts to submit the request automatically. |
-| `CHECK_ERROR` | Records the uncertain result and does not open the removal form. |
-| Form or submission error | Records the error when supported by the implementation; inspect the browser and logs to determine what happened. |
+| `NOT_LISTED` | Records the result and continues to the next IP. |
+| `LISTED` | Opens the removal form, fills the configured contact details, and clicks Submit. |
+| `SUBMISSION_CONFIRMED` | Records the recognized confirmation and extracted confirmation number, when available, in the result detail; then continues to the next IP. |
+| `SUBMISSION_UNCONFIRMED` | Records that no recognized confirmation appeared within three minutes. The request may still have been received, so verify manually before retrying; the agent does not automatically retry it. |
+| `CHECK_ERROR` | Records the uncertain lookup result and does not open the removal form. |
+| Form or submission error | Records the outcome when supported by the implementation; inspect the browser and logs to understand what happened. |
 
-Automatic submission is an attempt to send a request, not proof that Barracuda accepted it or removed the IP from the list.
+A recognized request-received message confirms that Barracuda displayed a receipt confirmation. It does not establish that the IP has been delisted.
 
 ## Output Files
 
 | File | Description |
 |---|---|
-| `results.csv` | Records processing timestamps, IP addresses, statuses, and details. |
-| `agent.db` | SQLite database containing persistent processing state. |
+| `results.csv` | Appends processing timestamps, IP addresses, statuses, and details. Successful submission details include the extracted confirmation number when available. |
+| `agent.db` | SQLite database containing the latest recorded processing status and detail for each IP. |
 | `input_ips.csv` | Input list of IPv4 addresses to check. |
-| `.env` | Local configuration containing contact and request details. |
+| `.env` | Local configuration containing contact and request details. Keep it private. |
 
-The exact fields and state transitions depend on the implementation. Review the output files to understand the recorded outcomes.
+The confirmation number is stored in the existing `detail` field in both `results.csv` and `agent.db`; no extra database column is required.
 
 ## Troubleshooting
 
@@ -156,7 +162,11 @@ Verify that the lookup result clearly matches the recognized listed condition. I
 
 ### The request outcome is uncertain
 
-A click on the Submit button does not guarantee successful submission. Check the resulting browser response and any confirmation message before treating the request as accepted. Avoid blindly retrying a request whose outcome is unknown.
+The agent waits up to three minutes for a recognized confirmation. If one is not detected, it records `SUBMISSION_UNCONFIRMED`. A missing confirmation does not prove that Barracuda failed to receive the request. Verify the status manually before retrying, since the agent skips IPs with previous submission statuses.
+
+### The confirmation number is missing
+
+The number is extracted only when it appears in a format recognized by the current code. If the page wording changes or no number is shown, the agent may record the confirmation without a number. Check the visible browser response and confirm the result manually.
 
 ## Security and Responsible Use
 
@@ -165,13 +175,14 @@ A click on the Submit button does not guarantee successful submission. Check the
 - Keep `.env`, `input_ips.csv`, `results.csv`, and `agent.db` private if they contain sensitive information.
 - Exclude virtual environments, private configuration, and runtime data from Git.
 - Respect Barracuda's applicable terms, policies, and rate limits.
+- Stop and investigate if the website presents a CAPTCHA, rate-limit message, access-denied page, or another security challenge; do not attempt to bypass it.
 - Review error states and unexpected browser behavior carefully.
 
 ## Limitations
 
-The agent depends on the current structure and wording of the Barracuda website. Changes to HTML, selectors, form fields, or result messages may require code updates.
+The agent depends on the current structure and wording of the Barracuda website. Changes to HTML, selectors, form fields, confirmation messages, or confirmation-number formatting may require code updates.
 
-Reputation classification may fail when the page returns unexpected content. The agent cannot guarantee that a removal request will be accepted or that an IP address will be delisted.
+Reputation classification may fail when the page returns unexpected content. The agent cannot guarantee that a removal request will be accepted or that an IP address will be delisted. A submission confirmation indicates receipt confirmation, not successful delisting.
 
 ## Contributing
 
