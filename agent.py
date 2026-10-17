@@ -118,18 +118,35 @@ def click_lookup(page):
     return False
 
 
+
 def classify_page(page, ip):
-    text = re.sub(r"\s+", " ", page.locator("body").inner_text(timeout=10000)).lower()
+    text = re.sub(
+        r"\s+", " ", page.locator("body").inner_text(timeout=10000)
+    ).lower()
+
     ip_re = re.escape(ip.lower())
-    if re.search(rf"{ip_re}.{{0,160}}not currently listed as\s+['\"]?poor", text):
-        return "NOT_LISTED", "Official lookup page says the IP is not currently listed as poor."
-    if re.search(rf"{ip_re}.{{0,160}}(?:is currently listed as|is listed as)\s+['\"]?poor", text):
-        return "LISTED", "Official lookup page says the IP is listed as poor."
-    if "not currently listed as" in text and "poor" in text:
-        return "NOT_LISTED", "Official lookup page indicates the IP is not currently listed as poor."
-    if ("currently listed as" in text or "listed as" in text) and "poor" in text and "not currently listed as" not in text:
-        return "LISTED", "Official lookup page appears to indicate a poor listing."
-    return "CHECK_ERROR", "Could not confidently identify a final result on the lookup page."
+
+    if re.search(
+        rf"{ip_re}.{{0,160}}not currently listed as\s+['\"]?poor",
+        text,
+    ):
+        return "NOT_LISTED", (
+            "Official lookup page says the IP is not currently listed as poor."
+        )
+
+    if re.search(
+        rf"{ip_re}.{{0,160}}(?:is currently listed as|is listed as)\s+['\"]?poor",
+        text,
+    ):
+        return "LISTED", (
+            "Official lookup page says the IP is listed as poor."
+        )
+
+    return "CHECK_ERROR", (
+        "Could not confidently identify a final result for this IP "
+        "on the lookup page."
+    )
+
 
 
 def website_lookup(page, ip):

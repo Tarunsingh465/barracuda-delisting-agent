@@ -1,6 +1,14 @@
 .env
+.env.*
+!.env.example
+
 .venv/
+venv/
 __pycache__/
+*.py[cod]
+
 agent.db
+agent.db-*
+*.db
 results.csv
 input_ips.csv
