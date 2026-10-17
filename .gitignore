@@ -1,0 +1,6 @@
+.env
+.venv/
+__pycache__/
+agent.db
+results.csv
+input_ips.csv
