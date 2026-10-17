@@ -22,7 +22,10 @@ REMOVAL_REASON = os.getenv("REMOVAL_REASON", "").strip()
 INPUT_PATH = "input_ips.csv"
 RESULTS_PATH = "results.csv"
 DB_PATH = "agent.db"
+
 TIMEOUT_MS = 30000
+CONFIRMATION_TIMEOUT_MS = 180000  # 3 minutes
+CONFIRMATION_POLL_MS = 1000
 
 
 def now():
@@ -32,91 +35,135 @@ def now():
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS ip_jobs (
-            ip TEXT PRIMARY KEY, status TEXT NOT NULL, detail TEXT, updated_at TEXT NOT NULL
+            ip TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            detail TEXT,
+            updated_at TEXT NOT NULL
         )""")
 
 
 def get_status(ip):
     with sqlite3.connect(DB_PATH) as conn:
-        row = conn.execute("SELECT status FROM ip_jobs WHERE ip=?", (ip,)).fetchone()
+        row = conn.execute(
+            "SELECT status FROM ip_jobs WHERE ip=?", (ip,)
+        ).fetchone()
     return row[0] if row else None
 
 
 def record(ip, status, detail=""):
+    timestamp = now()
+
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""INSERT INTO ip_jobs(ip,status,detail,updated_at) VALUES(?,?,?,?)
-        ON CONFLICT(ip) DO UPDATE SET status=excluded.status, detail=excluded.detail,
-        updated_at=excluded.updated_at""", (ip, status, detail, now()))
-    new_file = not os.path.exists(RESULTS_PATH) or os.path.getsize(RESULTS_PATH) == 0
+        conn.execute(
+            """INSERT INTO ip_jobs(ip,status,detail,updated_at)
+            VALUES(?,?,?,?)
+            ON CONFLICT(ip) DO UPDATE SET
+                status=excluded.status,
+                detail=excluded.detail,
+                updated_at=excluded.updated_at""",
+            (ip, status, detail, timestamp),
+        )
+
+    new_file = (
+        not os.path.exists(RESULTS_PATH)
+        or os.path.getsize(RESULTS_PATH) == 0
+    )
+
     with open(RESULTS_PATH, "a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
+        writer = csv.writer(f)
+
         if new_file:
-            w.writerow(["timestamp_utc", "ip", "status", "detail"])
-        w.writerow([now(), ip, status, detail])
+            writer.writerow(["timestamp_utc", "ip", "status", "detail"])
+
+        writer.writerow([timestamp, ip, status, detail])
 
 
 def load_ips():
     if not os.path.exists(INPUT_PATH):
         raise FileNotFoundError(f"Missing {INPUT_PATH}")
+
     ips, seen = [], set()
+
     with open(INPUT_PATH, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             raw = (row.get("ip") or "").strip()
+
             if not raw or raw.startswith("#"):
                 continue
+
             try:
                 parsed = ipaddress.ip_address(raw)
             except ValueError:
                 record(raw, "INVALID_IP", "Input is not a valid IP address")
                 print(f"Skipping invalid IP entry: {raw!r}")
                 continue
+
             if parsed.version != 4:
-                record(str(parsed), "UNSUPPORTED_IP_VERSION", "Only IPv4 is supported")
+                record(
+                    str(parsed),
+                    "UNSUPPORTED_IP_VERSION",
+                    "Only IPv4 is supported",
+                )
                 continue
+
             ip = str(parsed)
+
             if ip not in seen:
                 seen.add(ip)
                 ips.append(ip)
+
     return ips
 
 
 def fill_lookup_ip(page, ip):
     try:
         field = page.get_by_label("IP or Domain", exact=False)
+
         if field.count():
             field.first.fill(ip)
             return True
     except Exception:
         pass
+
     fields = page.locator("input:visible")
+
     for i in range(fields.count()):
         field = fields.nth(i)
+
         try:
-            if (field.get_attribute("type") or "text").lower() in {"text", "search"}:
+            if (field.get_attribute("type") or "text").lower() in {
+                "text", "search"
+            }:
                 field.fill(ip)
                 return True
         except Exception:
             continue
+
     return False
 
 
 def click_lookup(page):
     try:
-        button = page.get_by_role("button", name="Check Reputation", exact=False)
+        button = page.get_by_role(
+            "button", name="Check Reputation", exact=False
+        )
+
         if button.count():
             button.first.click()
             return True
     except Exception:
         pass
+
     try:
         button = page.get_by_text("Check Reputation", exact=False)
+
         if button.count():
             button.first.click()
             return True
     except Exception:
         pass
-    return False
 
+    return False
 
 
 def classify_page(page, ip):
@@ -148,32 +195,41 @@ def classify_page(page, ip):
     )
 
 
-
 def website_lookup(page, ip):
-    page.goto(LOOKUP_URL, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
+    page.goto(
+        LOOKUP_URL,
+        wait_until="domcontentloaded",
+        timeout=TIMEOUT_MS,
+    )
+
     if not fill_lookup_ip(page, ip):
         return "CHECK_ERROR", "Could not locate the IP or Domain field."
+
     if not click_lookup(page):
         return "CHECK_ERROR", "Could not locate the Check Reputation button."
+
     try:
         page.wait_for_load_state("domcontentloaded", timeout=10000)
     except PlaywrightTimeoutError:
         pass
+
     page.wait_for_timeout(1000)
     return classify_page(page, ip)
 
 
-
 def fill_removal_form(page, ip):
     missing = [
-        key for key, value in {
+        key
+        for key, value in {
             "CONTACT_EMAIL": CONTACT_EMAIL,
             "CUSTOMER_NAME": CUSTOMER_NAME,
             "CUSTOMER_EMAIL": CUSTOMER_EMAIL,
             "PHONE_NUMBER": PHONE_NUMBER,
             "REMOVAL_REASON": REMOVAL_REASON,
-        }.items() if not value
+        }.items()
+        if not value
     ]
+
     if missing:
         return "CONFIG_ERROR", "Missing .env values: " + ", ".join(missing)
 
@@ -214,6 +270,7 @@ def fill_removal_form(page, ip):
             locator.fill(value)
 
         textareas = page.locator("textarea:visible")
+
         if textareas.count() != 1:
             return (
                 "FORM_FILL_ERROR",
@@ -222,13 +279,11 @@ def fill_removal_form(page, ip):
 
         textareas.first.fill(REMOVAL_REASON)
 
-        # Verify the IP is present in the form before proceeding.
         if text_inputs[0].input_value().strip() != ip:
             return "FORM_FILL_ERROR", "IP verification failed."
 
         print(f"Submitting removal request for listed IP: {ip}")
 
-        # Click only the actual form's submit button.
         form = text_inputs[0].locator("xpath=ancestor::form")
         submit_button = form.get_by_role(
             "button", name=re.compile(r"submit|send request", re.I)
@@ -240,45 +295,83 @@ def fill_removal_form(page, ip):
                 "Could not uniquely identify the form's Submit button.",
             )
 
-        # Mark the attempt before clicking so a timeout won't trigger
-        # an automatic duplicate submission on the next run.
         record(
             ip,
             "SUBMISSION_ATTEMPTED",
             "Form validated; submission is about to be attempted.",
         )
 
-        submit_button.click(timeout=TIMEOUT_MS)
+        # Click without waiting for navigation to finish.
+        submit_button.click(
+            timeout=TIMEOUT_MS,
+            no_wait_after=True,
+        )
 
-        try:
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-        except PlaywrightTimeoutError:
-            pass
-
-        page.wait_for_timeout(1500)
-        response_text = re.sub(
-            r"\s+", " ", page.locator("body").inner_text(timeout=10000)
-        ).lower()
-
-        # Replace these phrases with the exact confirmation text shown
-        # by Barracuda after a successful submission.
         confirmation_phrases = (
+            "request received",
             "request has been submitted",
             "request was submitted",
             "successfully submitted",
             "submission successful",
         )
 
-        if any(phrase in response_text for phrase in confirmation_phrases):
-            return (
-                "SUBMISSION_CONFIRMED",
-                "The page displayed a recognized submission confirmation.",
-            )
+        deadline = time.monotonic() + CONFIRMATION_TIMEOUT_MS / 1000
+
+        while time.monotonic() < deadline:
+            try:
+                response_text = re.sub(
+                    r"\s+",
+                    " ",
+                    page.locator("body").inner_text(timeout=5000),
+                ).strip()
+
+                response_lower = response_text.lower()
+
+                if any(
+                    phrase in response_lower
+                    for phrase in confirmation_phrases
+                ):
+                    match = re.search(
+                        r"confirmation number is\s+([A-Z0-9-]+)",
+                        response_text,
+                        re.IGNORECASE,
+                    )
+
+                    confirmation_number = (
+                        match.group(1) if match else None
+                    )
+
+                    if confirmation_number:
+                        detail = (
+                            "Barracuda confirmed receipt. "
+                            f"Confirmation number: {confirmation_number}"
+                        )
+                    else:
+                        detail = (
+                            "Barracuda displayed a request-received "
+                            "confirmation, but no confirmation number "
+                            "was extracted."
+                        )
+
+                    return "SUBMISSION_CONFIRMED", detail
+
+            except PlaywrightTimeoutError:
+                pass
+
+            remaining = deadline - time.monotonic()
+
+            if remaining > 0:
+                page.wait_for_timeout(
+                    min(
+                        CONFIRMATION_POLL_MS,
+                        max(1, int(remaining * 1000)),
+                    )
+                )
 
         return (
             "SUBMISSION_UNCONFIRMED",
-            "Submit was clicked, but no recognized confirmation was found. "
-            "Check the visible browser and do not retry automatically.",
+            "No recognized confirmation appeared within 3 minutes. "
+            "Verify manually before retrying.",
         )
 
     except PlaywrightTimeoutError as exc:
@@ -286,6 +379,7 @@ def fill_removal_form(page, ip):
             "SUBMISSION_UNCONFIRMED",
             f"Timeout during form processing; verify manually before retrying: {exc}",
         )
+
     except Exception as exc:
         return (
             "SUBMISSION_UNCONFIRMED",
@@ -295,31 +389,38 @@ def fill_removal_form(page, ip):
 
 def main():
     init_db()
+
     try:
         ips = load_ips()
     except (OSError, csv.Error) as exc:
         print(f"Input error: {exc}")
         return
+
     if not ips:
         print("No valid IPv4 addresses found in input_ips.csv.")
         return
 
     print(f"Loaded {len(ips)} unique IPv4 address(es).")
-    print("Visible official lookup for every IP; no automated removal submission.")
+    print("Checking reputation and processing listed IPs.")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
+
         try:
             for idx, ip in enumerate(ips, start=1):
                 print(f"\n[{idx}/{len(ips)}] Checking {ip}")
+
                 if get_status(ip) in {
                     "SUBMISSION_ATTEMPTED",
                     "SUBMISSION_CONFIRMED",
                     "SUBMISSION_UNCONFIRMED",
                     "SUBMITTED",
                 }:
-                    print("Skipping IP with a previous submission attempt; verify its status first.")
+                    print(
+                        "Skipping IP with a previous submission attempt; "
+                        "verify its status first."
+                    )
                     continue
 
                 try:
@@ -327,19 +428,39 @@ def main():
                 except PlaywrightTimeoutError as exc:
                     status, detail = "CHECK_ERROR", f"Lookup timed out: {exc}"
                 except Exception as exc:
-                    status, detail = "CHECK_ERROR", f"{type(exc).__name__}: {exc}"
+                    status, detail = (
+                        "CHECK_ERROR",
+                        f"{type(exc).__name__}: {exc}",
+                    )
 
                 print(f"Website result: {status} — {detail}")
                 record(ip, status, detail)
+
                 if status == "NOT_LISTED":
-                    print("Unlisted: leaving lookup result visible; no removal form will open.")
+                    print(
+                        "Unlisted: leaving lookup result visible; "
+                        "no removal form will open."
+                    )
+
                 elif status == "LISTED":
                     form_status, form_detail = fill_removal_form(page, ip)
+
+                    # Save the final status and confirmation number before
+                    # proceeding to the next IP.
                     record(ip, form_status, form_detail)
                     print(f"Removal form: {form_status} — {form_detail}")
+
+                    if form_status == "SUBMISSION_UNCONFIRMED":
+                        print(
+                            "Submission is unconfirmed. Waiting for the "
+                            "confirmation deadline before continuing."
+                        )
+
                 else:
                     print("Uncertain result: no removal form will open.")
+
                 time.sleep(2)
+
         finally:
             browser.close()
 
