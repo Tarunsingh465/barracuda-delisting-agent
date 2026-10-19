@@ -1,0 +1,177 @@
+----------------------------------------------------------------------
+Ran 21 tests in 0.051s
+
+OK
+Skipping unsupported IPv6 entry: '2001:db8::1'
+Skipping invalid IP entry: 'not-an-ip'
+
+[1/1] Checking 192.0.2.50
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 1/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+All input IPs have been processed in one lookup run.
+
+[1/12] Checking 192.0.2.1
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[2/12] Checking 192.0.2.2
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[3/12] Checking 192.0.2.3
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[4/12] Checking 192.0.2.4
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[5/12] Checking 192.0.2.5
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[6/12] Checking 192.0.2.6
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[7/12] Checking 192.0.2.7
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[8/12] Checking 192.0.2.8
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[9/12] Checking 192.0.2.9
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[10/12] Checking 192.0.2.10
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[11/12] Checking 192.0.2.11
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+
+[12/12] Checking 192.0.2.12
+Website result: NOT_LISTED — not listed
+Unlisted: no removal form will open.
+All input IPs have been processed in one lookup run.
+
+[1/11] Checking 192.0.2.1
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 1/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[2/11] Checking 192.0.2.2
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 2/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[3/11] Checking 192.0.2.3
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 3/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[4/11] Checking 192.0.2.4
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 4/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[5/11] Checking 192.0.2.5
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 5/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[6/11] Checking 192.0.2.6
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 6/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[7/11] Checking 192.0.2.7
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 7/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[8/11] Checking 192.0.2.8
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 8/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[9/11] Checking 192.0.2.9
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 9/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[10/11] Checking 192.0.2.10
+Website result: NOT_LISTED — not poor
+Unlisted: no removal form will open.
+
+[11/11] Checking 192.0.2.11
+Website result: LISTED — poor
+Consecutive poor-listed IPs: 1/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+All input IPs have been processed in one lookup run.
+
+[1/11] Checking 192.0.2.1
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 1/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[2/11] Checking 192.0.2.2
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 2/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[3/11] Checking 192.0.2.3
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 3/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[4/11] Checking 192.0.2.4
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 4/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[5/11] Checking 192.0.2.5
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 5/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[6/11] Checking 192.0.2.6
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 6/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[7/11] Checking 192.0.2.7
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 7/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[8/11] Checking 192.0.2.8
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 8/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[9/11] Checking 192.0.2.9
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 9/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+
+[10/11] Checking 192.0.2.10
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 10/10 (request-page batch 1)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+Request-page batch 1 completed (10 consecutive poor-listed IPs). Rotating only the request page; lookup page remains open.
+
+[11/11] Checking 192.0.2.11
+Website result: LISTED — poor listed
+Consecutive poor-listed IPs: 1/10 (request-page batch 2)
+Removal form: SUBMISSION_CONFIRMED — confirmed
+All input IPs have been processed in one lookup run.
+
+[1/3] Checking 192.0.2.1
+Website result: CHECK_ERROR — uncertain
+Lookup was uncertain. Stopping to avoid acting on an unreliable page state.

@@ -1,14 +1,50 @@
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
+# Python virtual environments
 .venv/
 venv/
+env/
+.packaging-venv/
+
+# Python cache and compiled files
 __pycache__/
 *.py[cod]
+*$py.class
 
-agent.db
-agent.db-*
+# Packaging and build artifacts
+build/
+dist/
+*.egg-info/
+packaging_workspace/
+
+# Runtime databases
 *.db
-results.csv
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Runtime input and output files
 input_ips.csv
+results.csv
+
+# Logs
+*.log
+agent_errors.log
+
+# Test output (uncomment if you don't want to commit test reports)
+# test-output.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Keep example configuration and input files tracked
+!.env.example
+!input_ips.example.csv
