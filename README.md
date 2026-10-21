@@ -1,36 +1,83 @@
-# Barracuda Delisting Agent
+# Barracuda IP Removal Agent
 
-A Python-based browser automation agent that checks IPv4 reputation using the official Barracuda Reputation Block List (BRBL) lookup page and automates the removal-request workflow for IP addresses clearly identified as listed.
+A project for checking IPv4 reputation using Barracuda's official Reputation Block List (BRBL) lookup page and managing removal-request workflows for IP addresses reported as listed.
 
-The agent uses Playwright to interact with the browser, loads contact details from a local `.env` file, and records processing results in CSV and SQLite files.
+This repository provides **two separate ways to use the project**:
+
+1. **Windows desktop app (`BarracudaIPAgent.exe`)** — a graphical interface for looking up single IPs, ranges, or pasted lists, viewing results and logs, and exporting records. This is the easiest option for most Windows users.
+2. **Python CLI (`agent.py`)** — the original Playwright-based browser automation script, configured through a local `.env` file and an `input_ips.csv` input list.
+
+The GUI app and CLI are separate implementations. Follow the instructions for the one you choose.
 
 ## Features
 
-- **Automated reputation lookup:** Opens the official Barracuda lookup page in a visible Chromium browser for every IPv4 address.
-- **Automatic IP entry:** Enters the IP address and clicks **Check Reputation**.
-- **Result classification:** Distinguishes clearly recognized listed and not-listed results.
-- **Unlisted IP handling:** Leaves the lookup result visible and continues to the next IP when the address is clearly not listed as poor.
-- **Removal form automation:** Opens the removal form when the lookup clearly reports a poor listing.
-- **Automatic form submission:** Fills in the configured contact details and submits the removal request automatically.
-- **Confirmation detection:** Recognizes Barracuda's request-received confirmation message.
-- **Confirmation number extraction:** Extracts the confirmation number when it appears in the response and stores it in the existing result detail.
-- **Confirmation waiting:** Checks for a confirmation for up to three minutes after the submit click. When a recognized confirmation appears, the result is recorded and the agent continues to the next IP. If none appears before the deadline, the result is recorded as `SUBMISSION_UNCONFIRMED` and processing continues without an automatic retry.
-- **Error handling:** Records ambiguous or unexpected lookup responses as `CHECK_ERROR` without opening the removal form.
-- **Result logging:** Records timestamps, IP addresses, statuses, and details in `results.csv`.
-- **Persistent state:** Stores the latest processing state and result detail in `agent.db`.
-- **Environment-based configuration:** Loads contact details and request information from a local `.env` file.
-- **Duplicate protection:** Skips IPs that already have a recorded submission attempt or outcome, so they can be verified before any further attempt.
+- Look up IPv4 addresses using Barracuda's official reputation lookup page.
+- Use the Windows GUI to enter a single address, an inclusive IP range, or paste multiple IPs.
+- View statuses, timestamps, messages, and confirmation details.
+- Export results to CSV and search/export application logs.
+- Save processing history locally and protect against duplicate submissions.
+- Configure contact details and removal reasons locally rather than embedding them in the shared executable.
+- Handle uncertain outcomes cautiously. A request-received confirmation does **not** mean the IP has been delisted.
 
-## Requirements
+## Option 1: Windows desktop application (recommended)
+
+### Requirements
+
+- Windows 10 or Windows 11, 64-bit.
+- Microsoft Edge installed; Google Chrome can be used as a fallback.
+- Internet access.
+- IP addresses and contact details you are authorized to manage.
+
+**Python is not required** to run the packaged EXE. The application uses a browser installed on your computer; it does not bundle Chromium.
+
+### How to use the EXE
+
+1. Download `BarracudaIPAgent.exe` from the download section at the end of this README.
+2. Save it in a folder you control and double-click it.
+3. **Set up your profile first.** Enter your own contact email, customer name, customer email, phone number, and removal reason in the Profile window.
+4. Click **Save Profile** to open the dashboard.
+5. Choose the input tab:
+   - **Single:** enter one IPv4 address.
+   - **Range:** enter a starting IP and ending IP; both endpoints are included.
+   - **Random:** paste one or more IPv4 addresses using supported separators such as new lines or commas. You do not need to create a CSV file.
+6. Review your entries and click **Start**.
+7. Check the Results table and status messages. A `LISTED` result means the lookup page reported that the IP is listed; it does not mean the IP has already been removed.
+8. Click **Export Results CSV** to export the displayed results. Click **View Logs** to search logs and export log records.
+9. Use **Pause/Resume** or **Stop** as needed. Allow the current operation to reach a safe checkpoint before closing the app.
+
+### Files created by the EXE
+
+The application stores runtime files beside the executable:
+
+| File | Purpose |
+|---|---|
+| `.env` | Saved profile and configuration. Keep it private. |
+| `results.csv` | Result records and exported run details. |
+| `agent.db` | SQLite processing state and duplicate-submission protection. |
+| `agent_errors.log` | Diagnostic messages, including errors and access restrictions. |
+
+Create your own profile on your computer. Do not upload or share `.env`, `agent.db`, results, input lists, or logs if they contain personal or confidential information. Back up important output files before moving or replacing the EXE.
+
+### EXE troubleshooting and safe use
+
+- HTTP **403/429** responses, access challenges, and uncertain lookup results stop processing. The app does not bypass access restrictions or automatically retry an ambiguous submission.
+- If a removal request returns an error or no confirmation appears, manually verify whether the request was received before submitting again.
+- A request-received confirmation does **not** prove that an IP address was delisted.
+- If the browser does not open, confirm Microsoft Edge or Google Chrome is installed.
+- If required profile fields are missing, use **Edit Profile**, enter your details, and save the profile.
+- If Windows shows a security warning, verify that the executable came from a source you trust and is the intended build. Do not ignore warnings for unknown files.
+
+## Option 2: Python CLI (`agent.py`)
+
+The CLI is a separate Playwright-based implementation. Use this section only if you want to run the Python script instead of the Windows GUI.
+
+### Requirements
 
 - Python 3.11 or a compatible Python version.
 - Git.
-- Visual Studio Code or another Python-compatible editor.
 - An internet connection.
 - Chromium installed through Playwright.
 - IPv4 addresses you are authorized to manage.
-
-## Installation
 
 ### 1. Clone the repository
 
@@ -39,35 +86,26 @@ git clone https://github.com/Tarunsingh465/barracuda-delisting-agent.git
 cd barracuda-delisting-agent
 ```
 
-### 2. Create a virtual environment
+### 2. Create and activate a virtual environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-If PowerShell blocks environment activation, use the virtual environment's Python executable directly.
+If PowerShell blocks activation, use the virtual environment's Python executable directly.
 
-### 3. Install dependencies
+### 3. Install dependencies and Chromium
 
 ```powershell
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-Install the Chromium browser required by Playwright:
-
-```powershell
 python -m playwright install chromium
 ```
 
-## Configuration
+### 4. Configure `.env`
 
-### 1. Create the environment file
-
-Create a `.env` file in the project root directory, alongside `agent.py`.
-
-Add the environment variables expected by your implementation. For example:
+Create a `.env` file in the project root alongside `agent.py`. Use the configuration keys expected by the current code. Example placeholders:
 
 ```dotenv
 BARRACUDA_LOOKUP_URL=https://barracudacentral.org/lookups/lookup-reputation
@@ -80,13 +118,11 @@ PHONE_NUMBER=your-authorized-phone-number
 REMOVAL_REASON="Describe the corrective actions taken to address the listing."
 ```
 
-Replace the example values with the actual configuration required by your code and valid contact information you are authorized to use.
+Replace the placeholder values with valid information you are authorized to use. Never commit your real `.env` file, private contact information, credentials, or other secrets to a public repository. Use `.env.example` with placeholder values when sharing setup instructions.
 
-**Security note:** Never commit your real `.env` file, private contact information, credentials, or other secrets to a public repository. Use `.env.example` with placeholder values when sharing configuration instructions.
+### 5. Prepare `input_ips.csv`
 
-### 2. Prepare the input file
-
-Create `input_ips.csv` in the project root. The file must contain an `ip` column with one IPv4 address per row.
+Create `input_ips.csv` in the project root with an `ip` column and one IPv4 address per row:
 
 ```csv
 ip
@@ -94,95 +130,62 @@ ip
 198.51.100.20
 ```
 
-The addresses above are documentation-only examples from reserved IP ranges. Replace them with IPv4 addresses you are authorized to check.
+These IPs are documentation-only examples from reserved ranges. Replace them with addresses you are authorized to check. Start with one address to verify your configuration and browser behavior.
 
-Start with one authorized IPv4 address to verify your configuration and browser behavior.
-
-## Usage
-
-### Run the agent
-
-Activate your virtual environment, navigate to the project root, and run:
+### 6. Run the CLI
 
 ```powershell
 python agent.py
 ```
 
-The agent opens a visible Chromium browser and processes the input addresses according to its lookup and form-handling logic.
+The script opens a visible Chromium browser and processes the input addresses according to its lookup and form-handling logic.
 
-### Expected behavior
+### CLI result statuses
 
-| Lookup result or form outcome | Agent behavior |
+| Status or outcome | Meaning |
 |---|---|
-| `NOT_LISTED` | Records the result and continues to the next IP. |
-| `LISTED` | Opens the removal form, fills the configured contact details, and clicks Submit. |
-| `SUBMISSION_CONFIRMED` | Records the recognized confirmation and extracted confirmation number, when available, in the result detail; then continues to the next IP. |
-| `SUBMISSION_UNCONFIRMED` | Records that no recognized confirmation appeared within three minutes. The request may still have been received, so verify manually before retrying; the agent does not automatically retry it. |
-| `CHECK_ERROR` | Records the uncertain lookup result and does not open the removal form. |
-| Form or submission error | Records the outcome when supported by the implementation; inspect the browser and logs to understand what happened. |
+| `NOT_LISTED` | The lookup result was recognized as not listed; the agent records the result and continues. |
+| `LISTED` | The lookup result was recognized as listed; the agent opens and fills the removal form. |
+| `SUBMISSION_CONFIRMED` | A recognized request-received confirmation was found. A confirmation number is saved when available. |
+| `SUBMISSION_UNCONFIRMED` | No recognized confirmation appeared within the waiting period. The request may still have been received; verify manually before retrying. |
+| `CHECK_ERROR` | The lookup response was ambiguous or unexpected; the agent does not treat it as a confirmed listing. |
+| Form/submission error | Inspect the browser and logs to understand the outcome. |
 
-A recognized request-received message confirms that Barracuda displayed a receipt confirmation. It does not establish that the IP has been delisted.
+The CLI waits up to three minutes for a recognized confirmation after the submit click. If no confirmation is found, it records `SUBMISSION_UNCONFIRMED` and does not automatically retry. A recognized receipt confirmation means Barracuda displayed a request-received message; it does not mean the IP has been delisted.
 
-## Output Files
+### CLI output files
 
 | File | Description |
 |---|---|
-| `results.csv` | Appends processing timestamps, IP addresses, statuses, and details. Successful submission details include the extracted confirmation number when available. |
-| `agent.db` | SQLite database containing the latest recorded processing status and detail for each IP. |
-| `input_ips.csv` | Input list of IPv4 addresses to check. |
-| `.env` | Local configuration containing contact and request details. Keep it private. |
+| `results.csv` | Processing timestamps, IP addresses, statuses, and details. |
+| `agent.db` | SQLite database containing the latest recorded status and detail for each IP. |
+| `input_ips.csv` | Input IP list. |
+| `.env` | Local contact and request configuration; keep it private. |
 
-The confirmation number is stored in the existing `detail` field in both `results.csv` and `agent.db`; no extra database column is required.
+The CLI stores a confirmation number in the existing result detail when it is available. Duplicate protection skips IPs that already have a recorded submission attempt or outcome so that the status can be checked before any further attempt.
 
-## Troubleshooting
+### CLI troubleshooting
 
-### Chromium does not launch
+- **Chromium does not launch:** run `python -m playwright install chromium`.
+- **`CHECK_ERROR`:** the website may be unavailable, the lookup may have timed out, or the page structure or result wording may have changed. Check the lookup manually rather than guessing the outcome.
+- **Missing environment variables:** verify that `.env` exists in the project root, the keys match the Python code, and required values are not empty.
+- **Removal form does not open:** confirm the lookup response clearly matches the listed condition and inspect the browser/logs.
+- **Uncertain submission:** check the site manually before retrying. A missing confirmation does not prove the request was not received.
+- **Missing confirmation number:** the page may not have shown a number or its format may not match the current code.
 
-Install the Playwright browser:
+## Security and responsible use
 
-```powershell
-python -m playwright install chromium
-```
-
-### The agent reports `CHECK_ERROR`
-
-The website may be unavailable, the lookup may have timed out, or the page structure or result wording may have changed.
-
-Open the official lookup page manually and inspect the result. An ambiguous response should not be interpreted as either a confirmed listing or a confirmed clean result.
-
-### Environment variables are missing
-
-- Verify that `.env` exists in the project root.
-- Check that variable names match those referenced in the Python code.
-- Confirm that required values are not empty.
-
-### The removal form does not open
-
-Verify that the lookup result clearly matches the recognized listed condition. Inspect the browser and logs rather than assuming the IP is listed.
-
-### The request outcome is uncertain
-
-The agent waits up to three minutes for a recognized confirmation. If one is not detected, it records `SUBMISSION_UNCONFIRMED`. A missing confirmation does not prove that Barracuda failed to receive the request. Verify the status manually before retrying, since the agent skips IPs with previous submission statuses.
-
-### The confirmation number is missing
-
-The number is extracted only when it appears in a format recognized by the current code. If the page wording changes or no number is shown, the agent may record the confirmation without a number. Check the visible browser response and confirm the result manually.
-
-## Security and Responsible Use
-
-- Use the agent only for IP addresses and contact details you are authorized to manage.
-- Verify the configured contact information and removal reason before enabling automated submissions.
-- Keep `.env`, `input_ips.csv`, `results.csv`, and `agent.db` private if they contain sensitive information.
+- Use this project only for IP addresses and contact details you are authorized to manage.
+- Verify the contact information and removal reason before submitting requests.
+- Keep `.env`, input lists, databases, results, and logs private when they contain sensitive information.
 - Exclude virtual environments, private configuration, and runtime data from Git.
 - Respect Barracuda's applicable terms, policies, and rate limits.
-- Stop and investigate if the website presents a CAPTCHA, rate-limit message, access-denied page, or another security challenge; do not attempt to bypass it.
-- Review error states and unexpected browser behavior carefully.
+- If the website presents a CAPTCHA, rate-limit message, access-denied page, or another security challenge, stop and investigate. Do not attempt to bypass it.
+- Review unexpected browser behavior and uncertain submission outcomes carefully.
 
 ## Limitations
 
-The agent depends on the current structure and wording of the Barracuda website. Changes to HTML, selectors, form fields, confirmation messages, or confirmation-number formatting may require code updates.
-
-Reputation classification may fail when the page returns unexpected content. The agent cannot guarantee that a removal request will be accepted or that an IP address will be delisted. A submission confirmation indicates receipt confirmation, not successful delisting.
+The project depends on the current structure and wording of the Barracuda website. Changes to HTML, selectors, form fields, confirmation messages, or confirmation-number formatting may require code updates. Reputation classification can fail when the page returns unexpected content. Neither implementation can guarantee that a removal request will be accepted or that an IP address will be delisted.
 
 ## Contributing
 
@@ -194,4 +197,12 @@ No license is specified in this repository. Add a `LICENSE` file if you intend t
 
 ## Disclaimer
 
-This is an independent project and is not affiliated with or endorsed by Barracuda Networks. Use it responsibly and verify the results of automated actions.
+This is an independent project and is not affiliated with or endorsed by Barracuda Networks. Use it responsibly and verify important lookup and submission outcomes.
+
+---
+
+## Download the Windows EXE
+
+**[Download BarracudaIPAgent.exe](https://raw.githubusercontent.com/Tarunsingh465/barracuda-delisting-agent/main/BarracudaIPAgent.exe)**
+
+For this download link to work, place the executable in the repository's root folder with the exact filename `BarracudaIPAgent.exe`, then commit and push it to the repository's `main` branch alongside this `README.md`. This link downloads the EXE; GitHub cannot launch the program directly from a README.
